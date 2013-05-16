@@ -575,7 +575,6 @@ void dt_lightroom_import (int imgid, dt_develop_t *dev, gboolean iauto)
   gboolean has_colorlabel = FALSE;
 
   float fratio = 0;                // factor ratio image
-  int flip = 0;                    // flip value
   float crop_roundness = 0;        // from lightroom
   int n_import = 0;                // number of iop imported
   const float hfactor = 3.0 / 9.0; // hue factor adjustment (use 3 out of 9 boxes in colorzones)
@@ -605,10 +604,6 @@ void dt_lightroom_import (int imgid, dt_develop_t *dev, gboolean iauto)
     else if (!xmlStrcmp(attribute->name, (const xmlChar *) "Orientation"))
     {
       orientation = atoi((char *)value);
-      if (orientation == 1 || orientation == 8) flip = 0;
-      else if (orientation == 2 || orientation == 7) flip = 1;
-      else if (orientation == 3 || orientation == 6) flip = 3;
-      else if (orientation == 4 || orientation == 5) flip = 2;
       if (orientation != 1) has_flip = TRUE;
     }
     else if (!xmlStrcmp(attribute->name, (const xmlChar *) "HasCrop"))
@@ -1138,38 +1133,11 @@ void dt_lightroom_import (int imgid, dt_develop_t *dev, gboolean iauto)
 
     fratio = (pc.cw - pc.cx) / (pc.ch - pc.cy);
 
-    if (has_flip)
-    {
-      // orientation > 4 means that the picture is in portrait mode
-      if (orientation > 4)
-      {
-        float tmp = pc.cx;
-        pc.cx = pc.cy;
-        pc.cy = 1.0 - pc.cw;
-        pc.cw = pc.ch;
-        pc.ch = 1.0 - tmp;
-      }
-
-      // then flip image if needed
-      if (flip & 1)
-      {
-        float cx = pc.cx;
-        pc.cx = 1.0 - pc.cw;
-        pc.cw = (1.0 - cx) * -1.0;
-      }
-      if (flip & 2)
-      {
-        float cy = pc.cy;
-        pc.cy = 1.0 - pc.ch;
-        pc.ch = (1.0 - cy) * -1.0;
-      }
-    }
-
     dt_add_hist (imgid, "clipping", (dt_iop_params_t *)&pc, sizeof(dt_iop_clipping_params_t), imported, LRDT_CLIPPING_VERSION, &n_import);
     refresh_needed=TRUE;
   }
 
-  if (dev != NULL && (!has_crop && has_flip))
+  if (dev != NULL && has_flip)
   {
     pf.orientation = 0;
 
